@@ -1,0 +1,106 @@
+---
+title: "Menu Maker"
+date: "December 2015"
+output: html_document
+---
+
+Daily menu making program  
+```{r base, echo=F, message=F, warning=F, fig.height=7.5, fig.width=10.5}
+foodinmouth <- function(numweeks){
+   require(lubridate)
+   require(ggplot2)
+   require(RColorBrewer)
+   require(plyr)
+   numweeks=numweeks
+   theme_set(theme_bw(base_size=12)+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()))
+   Food<-c("EatOut/Takeaway","PerogiesMeatballs","Meatloaf&Tots","Saimon&Wonton","SpanishNite","ChickenStuffingCorn","Lasagna",
+            "Spaghetti","Pizza","MacNCheese","Hamburgers","Steaks","Tacos","Surprise","Leftovers","GrilledCheese","ChickenCaesar","Soup","Sandwich",
+           "Fish","CrockPotMeat","Asian","PizzaRolls","CucumberSalad")
+   Initial<-c("Ordr","Prgy","Loaf","SWon","Tapa","Mich","Lsga","Spag","Piza","McCz","HamB","Stks","Taco","Surp","Left","GrCz","Caes",
+               "Soup","Sand","Fish","CPMt","Asia","PRol","CSal")
+   foodini<-data.frame(cbind(Food,Initial)) ## get the initials and items together
+   days=7
+   np<-length(Food)
+   fp<-c(2,2,1,3,2,2,1,3,4,5,2,1,3,4,3,2,2,2,1,0.3,0.7,1,1,3)# Assign some relative weights based on ad hoc family voting
+    menu <- data.frame(Food=c(replicate(numweeks,sample(Food,days,prob=fp/np,replace=F ))), 
+                         day=now() + c(1:(numweeks*days)) * days(1))
+   menu$Week <- round_date(menu$day, "week")
+   menu$Day <- weekdays(menu$day)
+   menu <- merge(menu, foodini, by="Food")
+   menu$labels <- floor_date(menu$day,"week")
+   bb<-match(menu$Meal,Food)
+   bbdif<-c(diff(bb,lag=1),diff(bb,lag=2),diff(bb,lag=3),diff(bb,lag=4))  ### preventing close proximity menu items
+   if(!0%in%bbdif)
+   if(length(unique(bb))==(length(Food))) break  ## assuring all menu items make the cut
+
+#plotting stuff   
+#menu$Week<-factor(menu$Week, levels=seq(numweeks,1))
+   menu <- arrange(menu, Week)
+   menucols <- length(factor(menu$Food))
+   getPalette = colorRampPalette(brewer.pal(9, "Set1"))(menucols)
+### Get the levels right for plot order
+   menu$Day<-factor(menu$Day,levels=
+                       c("Saturday","Friday","Thursday","Wednesday","Tuesday","Monday","Sunday"))
+   
+   ggplot(menu, aes(labels,Day, fill=Food))+geom_tile()+ 
+            scale_fill_manual(values = getPalette)+
+      ggtitle("Lets eat, fatties!") + xlab("Week")+ylab("")+
+        geom_text(aes(x=labels, y=Day, label=Initial))
+
+
+}
+
+foodinmouth(8)
+```
+
+```{r, eval=F, echo=F} 
+#Horizontal version for fridgerator
+
+menu6$Week = with(menu6, factor(Week, levels = rev(levels(Week))))
+menu6$Day = with(menu6, factor(Day, levels = rev(levels(Day))))
+### reasonably good size png for printing
+png(filename = "menu2.png", width = 1920, height = 1080, units = "px", pointsize = 30,    bg = "white")
+
+ggplot(menu6, aes(x=rev(Week),y=rev(Day))) +
+  geom_tile(aes(fill=Food))+
+  geom_text(data = menu6, aes(x=rev(Week), y=rev(Day), label=Initial))+
+  labs(x="Week", y="Day of Week")+
+  coord_fixed() + theme(axis.text.x=element_text(angle = 90))+
+  ggtitle("Lets eat fatties!") 
+
+dev.off()
+
+### Make google calendar file for importing, could figure out how to get it to start on sunday
+### of the upcoming week
+oneday<-60*24*60
+daystillsunday<-7-as.numeric(format(as.Date(Sys.time()),"%w"))
+  menustart<-Sys.time()+daystillsunday*oneday
+googdates<-rep(menustart,numweeks*7)
+for(i in 1:length(googdates)) googdates[i]<-Sys.time()+i*oneday
+
+googdates2 <- seq(as.Date(menustart), by = "day", length.out = numweeks*7)
+
+
+nms <- c('Subject','Start Date','Start Time', 'End Date', 'End Time','All Day Event',
+  'Description','Location','Private')
+mat <- matrix(nrow = length(googdates), ncol = length(nms))
+mat <- data.frame(mat)
+colnames(mat) <- nms
+
+mat$Subject <- menu4$Food
+mat$"Start Date" <- googdates2
+mat$"End Date" <- googdates2
+mat$"All Day Event" <- "True"
+mat$Description <- "Hanselmenu"
+mat$Location <- "Glacier Hwy"
+mat$Private <- "False"
+
+starts <- strftime(googdates, format="%H:%M:%S %p")
+ends <- strftime(googdates+60*30, format="%H:%M:%S %p")
+
+mat$"Start Time" <- starts
+mat$"End Time" <- ends
+
+write.csv(mat,file="menudates.csv",quote=FALSE,row.names=FALSE)
+
+```
