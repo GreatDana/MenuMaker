@@ -41,7 +41,7 @@ ggplot(menu6, aes(x=Day,y=Week))+
   geom_text(data = menu6, aes(x=Day, y=Week, label=Initial), size=4)+
   labs(y="Week", x="Day of Week")+
   coord_fixed() + theme(axis.text.x=element_text(angle = 90))+
-   ggtitle("Lets eat fatties!")
+   ggtitle("Lets eat, fatties!")
 
 
 #Horizontal version for fridgerator
